@@ -116,6 +116,19 @@ def main():
     else:
         print("\n[2/4] Silence trimming skipped.")
 
+    # ── Length check ──────────────────────────────────────────────────────────
+    length_cfg = cfg.get("length", {})
+    min_s = length_cfg.get("min_seconds")
+    max_s = length_cfg.get("max_seconds")
+    duration = clip.duration
+    if min_s is not None and duration < min_s:
+        print(f"\n[skip] Video is {duration:.1f}s — shorter than min {min_s}s. Skipping.")
+        clip.close()
+        sys.exit(0)
+    if max_s is not None and duration > max_s:
+        print(f"\n[trim] Video is {duration:.1f}s — trimming to max {max_s}s.")
+        clip = clip.subclip(0, max_s)
+
     # ── Step 3: Add intro / outro ─────────────────────────────────────────────
     intro = cfg.get("intro_clip", "").strip() or None
     outro = cfg.get("outro_clip", "").strip() or None

@@ -6,6 +6,11 @@
 intro_clip: ""        # e.g. "assets/intro.mp4"
 outro_clip: ""        # e.g. "assets/outro.mp4"
 
+# Video length limits (seconds) — videos outside this range are skipped
+length:
+  min_seconds: 30
+  max_seconds: 60
+
 # Trimming
 trimming:
   remove_silence: true
@@ -45,7 +50,7 @@ output:
       bitrate: "15000k"       # High quality for YouTube
       fps: 60
     tiktok:
-      enabled: false
+      enabled: true
       resolution: "1080x1920"  # Vertical 9:16
       bitrate: "8000k"
       fps: 30
