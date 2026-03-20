@@ -1,0 +1,11 @@
+moviepy==1.0.3
+openai-whisper
+pydub
+ffmpeg-python
+google-api-python-client
+google-auth-httplib2
+google-auth-oauthlib
+requests
+pyyaml
+tqdm
+imageio[ffmpeg]

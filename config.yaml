@@ -1,0 +1,60 @@
+# ─────────────────────────────────────────────
+#  Video Editing Automation — Configuration
+# ─────────────────────────────────────────────
+
+# Paths to your intro and outro video clips (leave blank to skip)
+intro_clip: ""        # e.g. "assets/intro.mp4"
+outro_clip: ""        # e.g. "assets/outro.mp4"
+
+# Trimming
+trimming:
+  remove_silence: true        # Auto-remove silent sections
+  silence_threshold_db: -50   # dB level considered silence (lower = more aggressive)
+  min_silence_ms: 700         # Minimum silence duration (ms) before cutting
+  padding_ms: 200             # Keep this many ms around cuts so it doesn't feel jarring
+
+# Captions / subtitles
+captions:
+  enabled: true
+  whisper_model: "base"       # tiny | base | small | medium | large (larger = more accurate, slower)
+  font: "Arial"
+  font_size: 40
+  color: "white"
+  position: "bottom"          # top | center | bottom
+  background: true            # Add semi-transparent background behind text
+
+# Output
+output:
+  directory: "output"
+  formats:
+    youtube:
+      enabled: false
+      resolution: "1920x1080"
+      bitrate: "8000k"
+    tiktok:
+      enabled: false
+      resolution: "1080x1920"   # Vertical 9:16
+      bitrate: "4000k"
+    instagram:
+      enabled: false
+      resolution: "1080x1080"   # Square 1:1 (Reels use 1080x1920)
+      bitrate: "4000k"
+
+# Upload credentials
+upload:
+  youtube:
+    client_secrets_file: "credentials/youtube_client_secrets.json"
+    title: ""           # Leave blank to use source filename
+    description: ""
+    tags: []
+    privacy: "private"  # private | unlisted | public
+
+  tiktok:
+    access_token: ""    # From TikTok Developer Portal
+    caption: ""
+    privacy: "SELF_ONLY"  # SELF_ONLY | MUTUAL_FOLLOW_FRIENDS | FOLLOWER_OF_CREATOR | PUBLIC_TO_EVERYONE
+
+  instagram:
+    access_token: ""    # Instagram Graph API token
+    ig_user_id: ""      # Your Instagram Business/Creator account ID
+    caption: ""
