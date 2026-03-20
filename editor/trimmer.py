@@ -121,4 +121,14 @@ def trim_silence(
     print(f"  [trimmer] Keeping {len(merged)} segment(s) out of original {clip.duration:.1f}s")
 
     sub_clips = [clip.subclip(s, e) for s, e in merged]
+
+    # Apply crossfade transitions between cuts
+    fade_s = min(0.15, padding_ms / 1000.0)
+    if len(sub_clips) > 1:
+        faded = [sub_clips[0].crossfadeout(fade_s)]
+        for sc in sub_clips[1:-1]:
+            faded.append(sc.crossfadein(fade_s).crossfadeout(fade_s))
+        faded.append(sub_clips[-1].crossfadein(fade_s))
+        return concatenate_videoclips(faded, padding=-fade_s, method="compose")
+
     return concatenate_videoclips(sub_clips)
