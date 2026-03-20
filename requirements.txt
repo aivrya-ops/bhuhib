@@ -9,3 +9,5 @@ requests
 pyyaml
 tqdm
 imageio[ffmpeg]
+Pillow
+numpy

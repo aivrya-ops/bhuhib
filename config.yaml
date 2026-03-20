@@ -8,53 +8,68 @@ outro_clip: ""        # e.g. "assets/outro.mp4"
 
 # Trimming
 trimming:
-  remove_silence: true        # Auto-remove silent sections
-  silence_threshold_db: -50   # dB level considered silence (lower = more aggressive)
-  min_silence_ms: 700         # Minimum silence duration (ms) before cutting
-  padding_ms: 200             # Keep this many ms around cuts so it doesn't feel jarring
+  remove_silence: true
+  silence_threshold_db: -50   # dB considered silence (lower = more aggressive)
+  min_silence_ms: 500         # Minimum gap (ms) before cutting
+  padding_ms: 150             # Keep this ms around each cut to avoid abrupt jumps
 
-# Captions / subtitles
+# MrBeast-style captions
 captions:
   enabled: true
-  whisper_model: "base"       # tiny | base | small | medium | large (larger = more accurate, slower)
-  font: "Arial"
-  font_size: 40
-  color: "white"
+  whisper_model: "small"      # tiny | base | small | medium | large
+                              # "small" is the sweet spot: fast + accurate
+  font: "Impact"              # Impact = classic viral video look
+  font_size: 72               # Big and readable on mobile
+  text_color: "white"         # Non-active words
+  highlight_color: "yellow"   # Active (current) word
   position: "bottom"          # top | center | bottom
-  background: true            # Add semi-transparent background behind text
+  words_per_line: 4           # Words shown on screen at once
+  uppercase: true             # ALL CAPS like MrBeast
 
-# Output
+# Thumbnail
+thumbnail:
+  enabled: true
+  title: ""                   # Leave blank to use the filename as title
+  subtitle: ""                # Optional smaller text below the title
+  title_color: "255,255,0"    # RGB — yellow
+  subtitle_color: "255,255,255"
+  resolution: "1280x720"      # YouTube standard thumbnail size
+
+# Output — set enabled: true for the platforms you want
 output:
   directory: "output"
   formats:
     youtube:
       enabled: false
       resolution: "1920x1080"
-      bitrate: "8000k"
+      bitrate: "15000k"       # High quality for YouTube
+      fps: 60
     tiktok:
       enabled: false
-      resolution: "1080x1920"   # Vertical 9:16
-      bitrate: "4000k"
+      resolution: "1080x1920"  # Vertical 9:16
+      bitrate: "8000k"
+      fps: 30
     instagram:
       enabled: false
-      resolution: "1080x1080"   # Square 1:1 (Reels use 1080x1920)
-      bitrate: "4000k"
+      resolution: "1080x1920"  # Reels are 9:16
+      bitrate: "8000k"
+      fps: 30
 
-# Upload credentials
+# Upload credentials (fill in once you have them)
 upload:
   youtube:
     client_secrets_file: "credentials/youtube_client_secrets.json"
-    title: ""           # Leave blank to use source filename
+    title: ""            # Leave blank to use source filename
     description: ""
     tags: []
-    privacy: "private"  # private | unlisted | public
+    privacy: "private"   # private | unlisted | public
 
   tiktok:
-    access_token: ""    # From TikTok Developer Portal
+    access_token: ""     # From TikTok Developer Portal
     caption: ""
-    privacy: "SELF_ONLY"  # SELF_ONLY | MUTUAL_FOLLOW_FRIENDS | FOLLOWER_OF_CREATOR | PUBLIC_TO_EVERYONE
+    privacy: "SELF_ONLY" # SELF_ONLY | MUTUAL_FOLLOW_FRIENDS | FOLLOWER_OF_CREATOR | PUBLIC_TO_EVERYONE
 
   instagram:
-    access_token: ""    # Instagram Graph API token
-    ig_user_id: ""      # Your Instagram Business/Creator account ID
+    access_token: ""     # Instagram Graph API token
+    ig_user_id: ""       # Your Instagram Business/Creator account ID
     caption: ""

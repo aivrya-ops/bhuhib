@@ -55,10 +55,12 @@ def export_for_platform(clip: VideoFileClip, out_dir: str, name: str, platform: 
         y1 = (clip_h - new_h) // 2
         resized = clip.crop(y1=y1, height=new_h).resize((w, h))
 
+    fps = pcfg.get("fps", 30)
     print(f"  [export] Writing {platform} → {out_path}")
     resized.write_videofile(
         out_path,
         bitrate=bitrate,
+        fps=fps,
         audio_codec="aac",
         logger=None,
         verbose=False,
@@ -75,6 +77,7 @@ def main():
     parser.add_argument("--no-trim", action="store_true", help="Skip silence trimming")
     parser.add_argument("--no-captions", action="store_true", help="Skip caption generation")
     parser.add_argument("--no-overlay", action="store_true", help="Skip intro/outro")
+    parser.add_argument("--no-thumbnail", action="store_true", help="Skip thumbnail generation")
     args = parser.parse_args()
 
     # Validate input
@@ -89,7 +92,7 @@ def main():
     base_name = os.path.splitext(os.path.basename(args.video))[0]
 
     print(f"\n{'='*55}")
-    print(f"  Video Editing Automation")
+    print("  Video Editing Automation")
     print(f"  Input: {args.video}")
     print(f"{'='*55}\n")
 
@@ -127,22 +130,56 @@ def main():
 
     # ── Step 4: Burn captions ─────────────────────────────────────────────────
     if not args.no_captions and cfg["captions"]["enabled"]:
-        print("\n[4/4] Generating & burning captions …")
+        print("\n[4/5] Generating & burning MrBeast-style captions …")
         from editor.captions import burn_captions, CaptionConfig
         cap_cfg = cfg["captions"]
         clip = burn_captions(
             clip,
             CaptionConfig(
                 whisper_model=cap_cfg["whisper_model"],
-                font=cap_cfg["font"],
-                font_size=cap_cfg["font_size"],
-                color=cap_cfg["color"],
-                position=cap_cfg["position"],
-                background=cap_cfg["background"],
+                font=cap_cfg.get("font", "Impact"),
+                font_size=cap_cfg.get("font_size", 72),
+                text_color=cap_cfg.get("text_color", "white"),
+                highlight_color=cap_cfg.get("highlight_color", "yellow"),
+                position=cap_cfg.get("position", "bottom"),
+                words_per_line=cap_cfg.get("words_per_line", 4),
+                uppercase=cap_cfg.get("uppercase", True),
             ),
         )
     else:
-        print("\n[4/4] Captions skipped.")
+        print("\n[4/5] Captions skipped.")
+
+    # ── Step 5: Generate thumbnail ────────────────────────────────────────────
+    thumb_cfg = cfg.get("thumbnail", {})
+    if not args.no_thumbnail and thumb_cfg.get("enabled", True):
+        print("\n[5/5] Generating thumbnail …")
+        from editor.thumbnail import generate_thumbnail
+        thumb_title = thumb_cfg.get("title") or base_name.replace("_", " ").replace("-", " ").title()
+        thumb_subtitle = thumb_cfg.get("subtitle", "")
+        res_str = thumb_cfg.get("resolution", "1280x720")
+        res_w, res_h = map(int, res_str.split("x"))
+
+        def _parse_color(s: str, default):
+            try:
+                parts = [int(x.strip()) for x in str(s).split(",")]
+                return tuple(parts) if len(parts) == 3 else default
+            except Exception:
+                return default
+
+        t_color = _parse_color(thumb_cfg.get("title_color", "255,255,0"), (255, 255, 0))
+        s_color = _parse_color(thumb_cfg.get("subtitle_color", "255,255,255"), (255, 255, 255))
+        thumb_path = os.path.join(out_dir, f"{base_name}_thumbnail.jpg")
+        generate_thumbnail(
+            clip,
+            title=thumb_title,
+            output_path=thumb_path,
+            subtitle=thumb_subtitle,
+            title_color=t_color,
+            subtitle_color=s_color,
+            resolution=(res_w, res_h),
+        )
+    else:
+        print("\n[5/5] Thumbnail skipped.")
 
     # ── Export per-platform renders ───────────────────────────────────────────
     print("\n[export] Rendering output files …")
