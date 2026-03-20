@@ -1,16 +1,82 @@
 """
-Silence-based trimmer using pydub.
+Silence-based trimmer using ffmpeg/numpy (no pydub dependency).
 Detects and removes silent sections from a video clip.
 """
 from __future__ import annotations
 
+import json
 import os
+import subprocess
 import tempfile
 from typing import List, Tuple
 
-from pydub import AudioSegment
-from pydub.silence import detect_nonsilent
 from moviepy.editor import VideoFileClip, concatenate_videoclips
+
+
+def _detect_nonsilent_ffmpeg(
+    wav_path: str,
+    silence_thresh_db: int = -50,
+    min_silence_ms: int = 700,
+) -> List[Tuple[float, float]]:
+    """Use ffmpeg silencedetect to find non-silent ranges. Returns list of (start_s, end_s)."""
+    cmd = [
+        "ffmpeg", "-i", wav_path,
+        "-af", f"silencedetect=noise={silence_thresh_db}dB:d={min_silence_ms / 1000:.3f}",
+        "-f", "null", "-",
+    ]
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    output = result.stderr
+
+    # Parse silence_start / silence_end pairs
+    silence_ranges: List[Tuple[float, float]] = []
+    silence_start = None
+    for line in output.splitlines():
+        if "silence_start" in line:
+            try:
+                silence_start = float(line.split("silence_start:")[1].split()[0])
+            except (IndexError, ValueError):
+                pass
+        elif "silence_end" in line and silence_start is not None:
+            try:
+                silence_end = float(line.split("silence_end:")[1].split()[0])
+                silence_ranges.append((silence_start, silence_end))
+                silence_start = None
+            except (IndexError, ValueError):
+                pass
+
+    # Get total duration
+    duration = None
+    for line in output.splitlines():
+        if "Duration:" in line:
+            try:
+                t = line.split("Duration:")[1].split(",")[0].strip()
+                h, m, s = t.split(":")
+                duration = int(h) * 3600 + int(m) * 60 + float(s)
+            except Exception:
+                pass
+
+    if duration is None:
+        # fallback: probe the file
+        probe = subprocess.run(
+            ["ffprobe", "-v", "quiet", "-print_format", "json", "-show_format", wav_path],
+            capture_output=True, text=True,
+        )
+        try:
+            duration = float(json.loads(probe.stdout)["format"]["duration"])
+        except Exception:
+            duration = 0.0
+
+    # Convert silence ranges → non-silent ranges
+    non_silent: List[Tuple[float, float]] = []
+    cursor = 0.0
+    for s_start, s_end in sorted(silence_ranges):
+        if cursor < s_start:
+            non_silent.append((cursor, s_start))
+        cursor = s_end
+    if cursor < duration:
+        non_silent.append((cursor, duration))
+
+    return non_silent
 
 
 def trim_silence(
@@ -21,36 +87,27 @@ def trim_silence(
 ) -> VideoFileClip:
     """
     Remove silent sections from *clip*.
-
     Returns a new VideoFileClip with silence stripped out.
     """
-    # Export audio to a temp wav so pydub can analyse it
     with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
         tmp_path = tmp.name
 
     try:
         clip.audio.write_audiofile(tmp_path, logger=None)
-        audio = AudioSegment.from_wav(tmp_path)
+        non_silent = _detect_nonsilent_ffmpeg(tmp_path, silence_thresh_db, min_silence_ms)
     finally:
         os.unlink(tmp_path)
-
-    # Find non-silent ranges  →  list of [start_ms, end_ms]
-    non_silent: List[Tuple[int, int]] = detect_nonsilent(
-        audio,
-        min_silence_len=min_silence_ms,
-        silence_thresh=silence_thresh_db,
-    )
 
     if not non_silent:
         print("  [trimmer] No non-silent segments found — returning original clip.")
         return clip
 
-    # Add padding so cuts don't feel abrupt
-    duration_ms = len(audio)
+    # Add padding
+    duration_s = clip.duration
     padded: List[Tuple[float, float]] = []
-    for start_ms, end_ms in non_silent:
-        s = max(0, start_ms - padding_ms) / 1000.0
-        e = min(duration_ms, end_ms + padding_ms) / 1000.0
+    for start_s, end_s in non_silent:
+        s = max(0.0, start_s - padding_ms / 1000.0)
+        e = min(duration_s, end_s + padding_ms / 1000.0)
         padded.append((s, e))
 
     # Merge overlapping segments
