@@ -143,7 +143,10 @@ def burn_captions(clip, cfg: CaptionConfig):
     with tempfile.TemporaryDirectory() as tmpdir:
         # Extract audio
         audio_path = os.path.join(tmpdir, "audio.wav")
-        clip.audio.write_audiofile(audio_path, logger=None)
+        audio = clip.audio
+        if not hasattr(audio, 'fps') or not audio.fps:
+            audio = audio.set_fps(44100)
+        audio.write_audiofile(audio_path, logger=None)
 
         # Transcribe with word-level timestamps
         print(f"  [captions] Loading Whisper '{cfg.whisper_model}' …")
