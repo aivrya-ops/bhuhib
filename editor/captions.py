@@ -195,7 +195,10 @@ def burn_captions(clip, cfg: CaptionConfig):
         print("  [captions] Burning captions …")
         subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-        result_clip = VideoFileClip(tmp_out)
-        result_clip = result_clip.copy()
+        # Copy output outside the temp dir before it gets deleted
+        import shutil
+        persistent_out = tempfile.mktemp(suffix="_captions.mp4")
+        shutil.copy2(tmp_out, persistent_out)
 
+    result_clip = VideoFileClip(persistent_out)
     return result_clip
